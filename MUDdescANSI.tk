@@ -1,0 +1,904 @@
+#!/usr/bin/wish
+########################################
+# MUD desc ANSI                        #
+# Create colorful descriptions         #
+# for MUD objects                      #
+########################################
+
+package require Tk
+
+
+############## INIT PART ##############
+
+set CurrFG "0_37" ; set CurrBG "40" ; global CurrFG CurrBG
+array set Data {XSize 0 YSize 0 CH:0:0 "X" FG:0:0 0_37 BG:0:0 40 Descr "Dummy description" FileName "dummy_drawing"} ; global Data
+array set Idx2Hex { 0_30 "#000000" 0_31 "#A00000" 0_32 "#00A000" 0_33 "#A0A000" 0_34 "#0000A0" 0_35 "#A000A0" 0_36 "#00A0A0" 0_37 "#A0A0A0" 1_30 "#606060" 1_31 "#FF0000" 1_32 "#00FF00" 1_33 "#FFFF00" 1_34 "#0000FF" 1_35 "#FF00FF" 1_36 "#00FFFF" 1_37 "#FFFFFF" 40 "#000000" 41 "#A00000" 42 "#00A000" 43 "#A0A000" 44 "#0000A0" 45 "#A000A0" 46 "#00A0A0" 47 "#A0A0A0" } ; global Idx2Hex
+array set Config {NormalAtEOL 1 SingleClick 0}
+set DrawChar "@" ; global DrawChar
+set TempX 10 ; set TempY 10
+set ColList "00 19 20 26 33 40 4C 60 66 6C 73 79 80 86 8C 93 99 A0 C0 E0 FF" ; global ColList
+set ColR "00" ; set ColG "00" ; set ColB "00" ; global ColR ColG ColB
+
+array set ANSFG2MUX {
+	0_30 "%xx"    0_31 "%xr"    0_32 "%xg"    0_33 "%xy"    0_34 "%xb"    0_35 "%xm"    0_36 "%xc"    0_37 "%xw"
+	1_30 "%xx%xh" 1_31 "%xr%xh" 1_32 "%xg%xh" 1_33 "%xy%xh" 1_34 "%xb%xh" 1_35 "%xm%xh" 1_36 "%xc%xh" 1_37 "%xw%xh"
+}
+array set ANSFG2MOO {
+	0_30 {[normal][black]} 0_31 {[normal][red]} 0_32 {[normal][green]} 0_33 {[normal][yellow]} 0_34 {[normal][blue]} 0_35 {[normal][magenta]} 0_36 {[normal][cyan]} 0_37 {[normal][white]}
+	1_30 {[bold][gray]}    1_31 {[bold][red]}   1_32 {[bold][green]}   1_33 {[bold][yellow]}   1_34 {[bold][blue]}   1_35 {[bold][magenta]}   1_36 {[bold][cyan]}   1_37 {[bold][white]}
+}
+global ANSFG2MUX ANSFG2MOO
+
+array set ColIdx {} ; global ColIdx
+foreach {R	G	B	FG	BG	CH} {
+	00	00	00	0_30	40	" "
+	00	00	20	0_34	40	"░"
+	00	00	40	0_34	40	"▒"
+	00	00	60	0_34	40	"▓"
+	00	00	80	0_34	44	"█"
+	00	00	A0	1_34	44	"░"
+	00	00	C0	1_34	44	"▒"
+	00	00	E0	1_34	44	"▓"
+	00	00	FF	1_34	44	"█"
+	00	20	00	0_32	40	"░"
+	00	20	20	0_36	40	"░"
+	00	20	60	0_32	44	"░"
+	00	20	80	0_36	44	"░"
+	00	20	C0	1_34	42	"▓"
+	00	20	E0	1_34	46	"▓"
+	00	40	00	0_32	40	"▒"
+	00	40	40	0_34	42	"▒"
+	00	40	60	1_32	44	"░"
+	00	40	80	0_36	44	"▒"
+	00	40	A0	1_36	44	"░"
+	00	40	C0	1_34	46	"▒"
+	00	60	00	0_32	40	"▓"
+	00	60	20	0_32	44	"▓"
+	00	60	40	1_34	42	"░"
+	00	60	60	0_36	40	"▓"
+	00	60	80	0_36	44	"▓"
+	00	60	A0	1_34	46	"░"
+	00	80	00	0_32	42	"█"
+	00	80	20	0_36	42	"░"
+	00	80	40	0_36	42	"▒"
+	00	80	60	0_32	46	"░"
+	00	80	80	0_36	46	"█"
+	00	80	C0	1_36	44	"▒"
+	00	A0	00	1_32	42	"░"
+	00	A0	40	1_36	42	"░"
+	00	A0	60	1_32	46	"░"
+	00	A0	A0	1_36	46	"░"
+	00	C0	00	1_32	42	"▒"
+	00	C0	20	1_32	44	"▓"
+	00	C0	40	1_32	46	"▒"
+	00	C0	80	1_36	42	"▒"
+	00	C0	C0	1_36	46	"▒"
+	00	C0	E0	1_36	44	"▓"
+	00	E0	00	1_32	42	"▓"
+	00	E0	20	1_32	46	"▓"
+	00	E0	C0	1_36	42	"▓"
+	00	E0	E0	1_36	46	"▓"
+	00	FF	00	1_32	42	"█"
+	00	FF	FF	1_36	46	"█"
+	19	19	19	1_30	40	"░"
+	19	19	79	1_30	44	"░"
+	19	79	19	1_30	42	"░"
+	19	79	79	1_30	46	"░"
+	20	00	00	0_31	40	"░"
+	20	00	20	0_35	40	"░"
+	20	00	60	0_31	44	"░"
+	20	00	80	0_35	44	"░"
+	20	00	C0	1_34	41	"▓"
+	20	00	E0	1_34	45	"▓"
+	20	20	00	0_33	40	"░"
+	20	20	20	0_30	47	"▓"
+	20	20	60	0_33	44	"░"
+	20	20	80	0_34	47	"▓"
+	20	20	C0	1_34	43	"▓"
+	20	20	E0	1_34	47	"▓"
+	20	60	00	0_31	42	"░"
+	20	60	20	0_35	42	"░"
+	20	60	60	0_31	46	"░"
+	20	60	80	0_35	46	"░"
+	20	80	00	0_33	42	"░"
+	20	80	20	0_32	47	"▓"
+	20	80	60	0_33	46	"░"
+	20	80	80	0_36	47	"▓"
+	20	C0	00	1_32	41	"▓"
+	20	C0	20	1_32	45	"▓"
+	20	C0	C0	1_36	41	"▓"
+	20	C0	E0	1_36	45	"▓"
+	20	E0	00	1_32	43	"▓"
+	20	E0	20	1_32	47	"▓"
+	20	E0	C0	1_36	43	"▓"
+	20	E0	E0	1_36	47	"▓"
+	26	26	26	0_37	40	"░"
+	26	26	86	0_37	44	"░"
+	26	86	26	0_37	42	"░"
+	26	86	86	0_37	46	"░"
+	33	33	33	1_30	40	"▒"
+	33	33	73	1_30	44	"▒"
+	33	73	33	1_30	42	"▒"
+	33	73	73	1_30	46	"▒"
+	40	00	00	0_31	40	"▒"
+	40	00	40	0_35	40	"▒"
+	40	00	60	1_31	44	"░"
+	40	00	80	0_35	44	"▒"
+	40	00	A0	1_35	44	"░"
+	40	00	C0	1_34	45	"▒"
+	40	40	00	0_31	42	"▒"
+	40	40	40	1_37	40	"░"
+	40	40	60	1_33	44	"░"
+	40	40	80	0_34	47	"▒"
+	40	40	A0	1_37	44	"░"
+	40	40	C0	1_34	47	"▒"
+	40	60	00	1_31	42	"░"
+	40	60	40	1_35	42	"░"
+	40	60	60	1_31	46	"░"
+	40	60	A0	1_35	46	"░"
+	40	80	00	0_33	42	"▒"
+	40	80	40	0_36	43	"▒"
+	40	80	80	0_36	47	"▒"
+	40	80	C0	1_36	45	"▒"
+	40	A0	00	1_33	42	"░"
+	40	A0	40	1_37	42	"░"
+	40	A0	60	1_33	46	"░"
+	40	A0	A0	1_37	46	"░"
+	40	C0	00	1_32	43	"▒"
+	40	C0	40	1_32	47	"▒"
+	40	C0	80	1_36	43	"▒"
+	40	C0	C0	1_36	47	"▒"
+	4C	4C	4C	0_37	40	"▒"
+	4C	4C	6C	1_30	44	"▓"
+	4C	4C	8C	0_37	44	"▒"
+	4C	6C	4C	1_30	42	"▓"
+	4C	6C	6C	1_30	46	"▓"
+	4C	8C	4C	0_37	42	"▒"
+	4C	8C	8C	0_37	46	"▒"
+	60	00	00	0_31	40	"▓"
+	60	00	20	0_34	41	"░"
+	60	00	40	1_34	41	"░"
+	60	00	60	0_35	40	"▓"
+	60	00	80	0_35	44	"▓"
+	60	00	A0	1_34	45	"░"
+	60	20	00	0_32	41	"░"
+	60	20	20	0_36	41	"░"
+	60	20	60	0_35	42	"▓"
+	60	20	80	0_36	45	"░"
+	60	40	00	1_32	41	"░"
+	60	40	40	1_36	41	"░"
+	60	40	60	1_32	45	"░"
+	60	40	A0	1_36	45	"░"
+	60	60	00	0_33	40	"▓"
+	60	60	20	0_34	43	"░"
+	60	60	40	1_34	43	"░"
+	60	60	60	0_30	47	"░"
+	60	60	80	0_34	47	"░"
+	60	60	A0	1_34	47	"░"
+	60	80	00	0_32	43	"░"
+	60	80	20	0_36	43	"░"
+	60	80	60	0_32	47	"░"
+	60	80	80	0_36	47	"░"
+	60	A0	00	1_32	43	"░"
+	60	A0	40	1_36	43	"░"
+	60	A0	60	1_32	47	"░"
+	60	A0	A0	1_36	47	"░"
+	66	66	66	1_30	40	"█"
+	6C	4C	4C	1_30	41	"▓"
+	6C	4C	6C	1_30	45	"▓"
+	6C	6C	4C	1_30	43	"▓"
+	6C	6C	6C	1_30	47	"▓"
+	73	33	33	1_30	41	"▒"
+	73	33	73	1_30	45	"▒"
+	73	73	33	1_30	43	"▒"
+	73	73	73	0_37	40	"▓"
+	73	73	93	0_37	44	"▓"
+	73	93	73	0_37	42	"▓"
+	73	93	93	0_37	46	"▓"
+	79	19	19	1_30	41	"░"
+	79	19	79	1_30	45	"░"
+	79	79	19	1_30	43	"░"
+	79	79	79	1_30	47	"░"
+	80	00	00	0_31	41	"█"
+	80	00	20	0_35	41	"░"
+	80	00	40	0_35	41	"▒"
+	80	00	60	0_31	45	"░"
+	80	00	80	0_35	45	"█"
+	80	00	C0	1_35	44	"▒"
+	80	20	00	0_33	41	"░"
+	80	20	20	0_31	47	"▓"
+	80	20	60	0_33	45	"░"
+	80	20	80	0_35	47	"▓"
+	80	40	00	0_31	43	"▒"
+	80	40	40	0_35	43	"▒"
+	80	40	80	0_35	47	"▒"
+	80	40	C0	1_35	46	"▒"
+	80	60	00	0_31	43	"░"
+	80	60	20	0_35	43	"░"
+	80	60	60	0_31	47	"░"
+	80	60	80	0_35	47	"░"
+	80	80	00	0_33	43	"█"
+	80	80	20	0_33	47	"▓"
+	80	80	40	1_33	44	"▒"
+	80	80	60	0_33	47	"░"
+	80	80	80	0_37	47	" "
+	80	80	C0	1_37	44	"▒"
+	80	C0	00	1_33	42	"▒"
+	80	C0	40	1_33	46	"▒"
+	80	C0	80	1_37	42	"▒"
+	80	C0	C0	1_37	46	"▒"
+	86	26	26	0_37	41	"░"
+	86	26	86	0_37	45	"░"
+	86	86	26	0_37	43	"░"
+	86	86	86	0_37	47	"░"
+	8C	4C	4C	0_37	41	"▒"
+	8C	4C	8C	0_37	45	"▒"
+	8C	8C	4C	0_37	43	"▒"
+	8C	8C	8C	0_37	47	"▒"
+	93	73	73	0_37	41	"▓"
+	93	73	93	0_37	45	"▓"
+	93	93	73	0_37	43	"▓"
+	93	93	93	0_37	47	"▓"
+	99	99	99	0_37	47	"█"
+	A0	00	00	1_31	41	"░"
+	A0	00	40	1_35	41	"░"
+	A0	00	60	1_31	45	"░"
+	A0	00	A0	1_35	45	"░"
+	A0	40	00	1_33	41	"░"
+	A0	40	40	1_37	41	"░"
+	A0	40	60	1_33	45	"░"
+	A0	40	A0	1_37	45	"░"
+	A0	60	00	1_31	43	"░"
+	A0	60	40	1_35	43	"░"
+	A0	60	60	1_31	47	"░"
+	A0	60	A0	1_35	47	"░"
+	A0	A0	00	1_33	43	"░"
+	A0	A0	40	1_37	43	"░"
+	A0	A0	60	1_33	47	"░"
+	A0	A0	A0	1_37	47	"░"
+	C0	00	00	1_31	41	"▒"
+	C0	00	20	1_31	44	"▓"
+	C0	00	40	1_31	45	"▒"
+	C0	00	80	1_35	41	"▒"
+	C0	00	C0	1_35	45	"▒"
+	C0	00	E0	1_35	44	"▓"
+	C0	20	00	1_31	42	"▓"
+	C0	20	20	1_31	46	"▓"
+	C0	20	C0	1_35	42	"▓"
+	C0	20	E0	1_35	46	"▓"
+	C0	40	00	1_31	43	"▒"
+	C0	40	40	1_31	47	"▒"
+	C0	40	80	1_35	43	"▒"
+	C0	40	C0	1_35	47	"▒"
+	C0	80	00	1_33	41	"▒"
+	C0	80	40	1_33	45	"▒"
+	C0	80	80	1_37	41	"▒"
+	C0	80	C0	1_37	45	"▒"
+	C0	C0	00	1_33	43	"▒"
+	C0	C0	20	1_33	44	"▓"
+	C0	C0	40	1_33	47	"▒"
+	C0	C0	80	1_37	43	"▒"
+	C0	C0	C0	1_37	47	"▒"
+	C0	C0	E0	1_37	44	"▓"
+	C0	E0	00	1_33	42	"▓"
+	C0	E0	20	1_33	46	"▓"
+	C0	E0	C0	1_37	42	"▓"
+	C0	E0	E0	1_37	46	"▓"
+	E0	00	00	1_31	41	"▓"
+	E0	00	20	1_31	45	"▓"
+	E0	00	C0	1_35	41	"▓"
+	E0	00	E0	1_35	45	"▓"
+	E0	20	00	1_31	43	"▓"
+	E0	20	20	1_31	47	"▓"
+	E0	20	C0	1_35	43	"▓"
+	E0	20	E0	1_35	47	"▓"
+	E0	C0	00	1_33	41	"▓"
+	E0	C0	20	1_33	45	"▓"
+	E0	C0	C0	1_37	41	"▓"
+	E0	C0	E0	1_37	45	"▓"
+	E0	E0	00	1_33	43	"▓"
+	E0	E0	20	1_33	47	"▓"
+	E0	E0	C0	1_37	43	"▓"
+	E0	E0	E0	1_37	47	"▓"
+	FF	00	00	1_31	41	"█"
+	FF	00	FF	1_35	45	"█"
+	FF	FF	00	1_33	43	"█"
+	FF	FF	FF	1_37	47	"█"
+} {
+	set ColIdx($R:$G:$B:FG) $FG
+	set ColIdx($R:$G:$B:BG) $BG
+	set ColIdx($R:$G:$B:CH) $CH
+}
+
+
+############## PROC PART ##############
+
+proc setFGcol {col} {
+global CurrFG
+	set CurrFG $col
+	foreach i {0 1} {
+		for {set j 30} {$j < 38} {incr j} {
+			.f_r.f_fg.l_${i}_$j config -relief raised -text " "
+		}
+	}
+	.f_r.f_fg.l_$col config -relief sunken -text "X"
+}
+
+proc setBGcol {col} {
+global CurrBG
+	set CurrBG $col
+	for {set j 40} {$j < 48} {incr j} {
+		.f_r.f_bg.l_$j config -relief raised -text " "
+	}
+	.f_r.f_bg.l_$col config -relief sunken -text "X"
+}
+
+proc setActChar {char} {
+global DrawChar
+
+	set DrawChar [string index $char 0]
+}
+
+
+proc load_picture {} {
+global Data
+
+	set Format { {{Data Files} {.dat}} }
+	set FName [tk_getOpenFile -initialdir data/ -filetypes $Format -title "Select a drawing to open"]
+	if {![string length $FName]} return
+	if {![file readable $FName]} {
+		tk_messageBox -title WARNING! -icon warning -type ok -message "No reading permission on file!"
+		return
+	}
+	set fin [open $FName r]
+	set Data(XSize) [gets $fin]
+	set Data(YSize) [gets $fin]
+	for {set j 0} {$j < $Data(YSize)} {incr j} {
+		set sor [gets $fin]
+		for {set i 0} {$i < $Data(XSize)} {incr i} {
+			set Data(CH:$i:$j) [string index $sor $i]
+		}
+	}
+	for {set j 0} {$j < $Data(YSize)} {incr j} {
+		set sor [gets $fin]
+		for {set i 0} {$i < $Data(XSize)} {incr i} {
+			set Data(FG:$i:$j) [lindex $sor $i]
+		}
+	}
+	for {set j 0} {$j < $Data(YSize)} {incr j} {
+		set sor [gets $fin]
+		for {set i 0} {$i < $Data(XSize)} {incr i} {
+			set Data(BG:$i:$j) [lindex $sor $i]
+		}
+	}
+	set Data(Descr) [read $fin]
+	close $fin
+	set Data(FileName) [file rootname [file tail $FName]]
+
+	refresh_big
+	refresh_map
+}
+
+
+proc new_picture {} {
+global Data TempX TempY
+
+	catch {destroy .np}
+	toplevel .np ; wm title .np "New Drawing"
+	grid [label .np.l1 -text "Enter Size in Characters:" -relief raised] -in .np -column 0 -row 0 -columnspan 2 -sticky news -padx 10 -pady 10
+	grid [label .np.l2 -text "Width:" -relief sunken] -in .np -column 0 -row 1 -sticky news -padx 10 -pady 10
+	grid [entry .np.e2 -textvariable TempX] -in .np -column 1 -row 1 -sticky news -padx 10 -pady 10
+	grid [label .np.l3 -text "Height:" -relief sunken] -in .np -column 0 -row 2 -sticky news -padx 10 -pady 10
+	grid [entry .np.e3 -textvariable TempY] -in .np -column 1 -row 2 -sticky news -padx 10 -pady 10
+	grid [button .np.bok -text "Create" -command do_create_new_picture] -in .np -column 0 -row 3 -sticky news -padx 30 -pady 30
+	grid [button .np.bcl -text "Cancel" -command {catch {destroy .np ; after 50 {raise .}}}] -in .np -column 1 -row 3 -sticky news -padx 30 -pady 30
+}
+proc do_create_new_picture {} {
+global Data TempX TempY
+	if {(![string is integer $TempX]) || (![string is integer $TempY])} {
+		tk_messageBox -type ok -title ERROR -icon error -message "Sizes must be integer"
+		return
+	}
+	if {($TempX < 1) || ($TempY < 1)} {
+		tk_messageBox -type ok -title ERROR -icon error -message "Sizes must be at least 1"
+		return
+	}
+	if {($TempX > 100) || ($TempY > 50)} {
+		if {[tk_messageBox -type yesno -title WARNING -icon warning -message "Sizes are suspiciously high!\n\nAre You sure to create a drawing this size?"] eq "no"} return
+	}
+
+	set Data(XSize) $TempX ; set Data(YSize) $TempY
+	for {set j 0} {$j < $TempY} {incr j} {
+		for {set i 0} {$i < $TempX} {incr i} {
+			set Data(FG:$i:$j) 0_37
+			set Data(BG:$i:$j) 40
+			set Data(CH:$i:$j) " "
+		}
+	}
+	set Data(Descr) "Enter Your text here..."
+	set Data(FileName) "New_drawing-[clock format [clock seconds] -format %Y%m%d-%H%M%S]"
+	refresh_big
+	refresh_map
+	catch {destroy .np}
+	after 50 {raise .}
+}
+
+
+proc load_ascii {} {
+global Data
+variable LineMaxLen 0
+variable LineCount 0
+array set RawLines {}
+
+	set Format { {{ASCII Files} {.asc .txt}} }
+	set FName [tk_getOpenFile -initialdir imports/ -filetypes $Format -title "Select an ASCII to open"]
+	if {![string length $FName]} return
+	if {![file readable $FName]} {
+		tk_messageBox -title WARNING! -icon warning -type ok -message "No reading permission on file!"
+		return
+	}
+	set fin [open $FName r] ; set sor ""
+	while {![string length $sor]} { set sor [gets $fin] }
+	while {(![eof $fin]) && ([string length $sor])} {
+		set RawLines($LineCount) $sor
+		incr LineCount
+		if {[string length $sor] > $LineMaxLen} {set LineMaxLen [string length $sor]}
+		set sor [gets $fin]
+	}
+	close $fin
+	set Data(XSize) $LineMaxLen
+	set Data(YSize) $LineCount
+
+	for {set j 0} {$j < $Data(YSize)} {incr j} {
+		for {set i 0} {$i < $Data(XSize)} {incr i} {
+			set Data(FG:$i:$j) "0_37"
+			set Data(BG:$i:$j) "40"
+			set _c [string index $RawLines($j) $i]
+			if {"$_c" eq ""} {
+				set Data(CH:$i:$j) " "
+			} else {
+				set Data(CH:$i:$j) $_c
+			}
+		}
+	}
+	set Data(Descr) "This is an imported ASCII art"
+	set Data(FileName) [file rootname [file tail $FName]]
+
+	refresh_big
+	refresh_map
+}
+
+
+proc save_picture {} {
+global Data
+
+	set fout [open "data/$Data(FileName).dat" w]
+	puts $fout $Data(XSize)
+	puts $fout $Data(YSize)
+	for {set j 0} {$j < $Data(YSize)} {incr j} {
+		for {set i 0} {$i < $Data(XSize)} {incr i} {
+			puts -nonewline $fout $Data(CH:$i:$j)
+		}
+		puts -nonewline $fout "\n"
+	}
+	for {set j 0} {$j < $Data(YSize)} {incr j} {
+		for {set i 0} {$i < $Data(XSize)} {incr i} {
+			puts -nonewline $fout $Data(FG:$i:$j)
+			if {$i < [expr $Data(XSize)-1]} {puts -nonewline $fout " "}
+		}
+		puts -nonewline $fout "\n"
+	}
+	for {set j 0} {$j < $Data(YSize)} {incr j} {
+		for {set i 0} {$i < $Data(XSize)} {incr i} {
+			puts -nonewline $fout $Data(BG:$i:$j)
+			if {$i < [expr $Data(XSize)-1]} {puts -nonewline $fout " "}
+		}
+		puts -nonewline $fout "\n"
+	}
+	puts $fout $Data(Descr)
+	close $fout
+}
+
+
+proc export_all {} {
+global Data Config ANSFG2MUX ANSFG2MOO
+
+	set fout(asc) [open "exports/$Data(FileName).asc" w]
+	set fout(ans) [open "exports/$Data(FileName).ans" w]
+	set fout(mux) [open "exports/$Data(FileName).mux" w]
+	set fout(moo) [open "exports/$Data(FileName).moo" w]
+	set CurrFG 37 ; set CurrBG 40 ; set CurrHi 0 ; set CurrFullFG 0_37
+	set LastFG 37 ; set LastBG 40 ; set LastHi 0 ; set LastFullFG 0_37
+
+	puts -nonewline $fout(mux) "@desc here = "
+	puts -nonewline $fout(moo) "@desc here as "
+	set Multiline 0
+
+	for {set j 0} {$j < $Data(YSize)} {incr j} {
+		if {$Multiline} {puts -nonewline $fout(moo) "say "}
+		for {set i 0} {$i < $Data(XSize)} {incr i} {
+			set CurrHi [string index $Data(FG:$i:$j) 0]
+			set CurrFG [string range $Data(FG:$i:$j) 2 3]
+			set CurrBG $Data(BG:$i:$j)
+			set CurrFullFG $Data(FG:$i:$j)
+			if {($CurrBG ne $LastBG) || ($CurrFG ne $LastFG) || ($CurrHi ne $LastHi)} {
+				set ANSIstarted 0
+				if {$CurrHi ne $LastHi} {
+					puts -nonewline $fout(ans) "\033\[$CurrHi"
+					set ANSIstarted 1
+				}
+				if {($CurrFG ne $LastFG) || ($CurrHi < $LastHi)} {
+					if {$ANSIstarted} {
+						puts -nonewline $fout(ans) "\;$CurrFG"
+					} else {
+						puts -nonewline $fout(ans) "\033\[$CurrFG"
+						set ANSIstarted 1
+					}
+				}
+				if {($CurrBG ne $LastBG) || ($CurrHi < $LastHi)} {
+					if {$ANSIstarted} {
+						puts -nonewline $fout(ans) "\;$CurrBG"
+					} else {
+						puts -nonewline $fout(ans) "\033\[$CurrBG"
+					}
+				}
+				puts -nonewline $fout(ans) "m"
+				set LastHi $CurrHi ; set LastBG $CurrBG ; set LastFG $CurrFG
+			}
+			if {$CurrFullFG ne $LastFullFG} {
+				puts -nonewline $fout(mux) $ANSFG2MUX($CurrFullFG)
+				puts -nonewline $fout(moo) $ANSFG2MOO($CurrFullFG)
+				set LastFullFG $CurrFullFG
+			}
+			puts -nonewline $fout(ans) $Data(CH:$i:$j)
+			puts -nonewline $fout(asc) $Data(CH:$i:$j)
+			puts -nonewline $fout(mux) $Data(CH:$i:$j)
+			puts -nonewline $fout(moo) $Data(CH:$i:$j)
+		}
+
+		if {$Config(NormalAtEOL)} {
+			puts $fout(ans) "\033\[0m"
+			puts -nonewline $fout(mux) "%xn%r"
+			puts $fout(moo) "\[normal\]"
+		} else {
+			puts $fout(ans) ""
+			puts -nonewline $fout(mux) "%r"
+			puts $fout(moo) ""
+		}
+		puts $fout(asc) ""
+		if {!$Multiline} {puts $fout(moo) "@notedit here.description" ; set Multiline 1}
+		set LastHi 0 ; set LastFG 37 ; set LastBG 40 ; set LastFullFG 0_37
+	}
+	if {[string length $Data(Descr)]} {
+		puts $fout(ans) $Data(Descr)
+		puts $fout(asc) $Data(Descr)
+		puts $fout(mux) "$Data(Descr)%r"
+		puts $fout(moo) "say $Data(Descr)"
+		puts $fout(moo) "save"
+	} else {
+		puts $fout(mux) ""
+	}
+	close $fout(asc) ; close $fout(ans) ; close $fout(mux) ; close $fout(moo)
+	tk_messageBox -type ok -title READY. -icon info -message "Files have been exported."
+}
+
+
+proc refresh_big {} {
+global Data Idx2Hex
+
+	set W ".f_l.c"
+	$W delete all
+	$W create rectangle 0 0 [expr $Data(XSize)*15+10] [expr $Data(YSize)*25+10] -fill "#404040" -outline "#404040"
+	foreach i [winfo children $W] {catch {destroy $i}}
+	for {set j 0} {$j < $Data(YSize)} {incr j} {
+		for {set i 0} {$i < $Data(XSize)} {incr i} {
+			set L "$W.l_${i}_${j}"
+			label $L -bg $Idx2Hex($Data(BG:$i:$j)) -fg $Idx2Hex($Data(FG:$i:$j)) -textvariable Data(CH:$i:$j) -font [font actual "Courier 12 bold"]
+			bind $L <1> "settoFG $i $j"
+			bind $L <2> "settoCH $i $j"
+			bind $L <3> "settoBG $i $j"
+			$W create window [expr $i*15+5] [expr $j*25+5] -window $L -anchor nw
+		}
+	}
+	$W config -scrollregion [list 0 0 [expr $Data(XSize)*15+15] [expr $Data(YSize)*25+15]]
+}
+
+
+proc settoFG {_i _j} {
+global Data CurrFG CurrBG DrawChar Config Idx2Hex
+	set Data(FG:$_i:$_j) $CurrFG
+	.f_l.c.l_${_i}_${_j} config -fg $Idx2Hex($CurrFG)
+	refresh_map
+	if {$Config(SingleClick)} {settoBG $_i $_j ; settoCH $_i $_j}
+}
+proc settoBG {_i _j} {
+global Data CurrBG Idx2Hex
+	set Data(BG:$_i:$_j) $CurrBG
+	.f_l.c.l_${_i}_${_j} config -bg $Idx2Hex($CurrBG)
+	refresh_map
+}
+proc settoCH {_i _j} {
+global Data DrawChar
+	set Data(CH:$_i:$_j) [string index $DrawChar 0]
+	.f_l.c.l_${_i}_${_j} config -text $[string index $DrawChar 0]
+	refresh_map
+}
+
+
+proc refresh_map {} {
+global Data
+
+	set W .f_r.f_t.t_r
+	$W config -state normal
+	$W delete 0.0 end
+	for {set j 0} {$j < $Data(YSize)} {incr j} {
+		for {set i 0} {$i < $Data(XSize)} {incr i} {
+			set _fg $Data(FG:$i:$j)
+			set _bg $Data(BG:$i:$j)
+			$W insert end $Data(CH:$i:$j) t_${_fg}_$_bg
+		}
+		$W insert end \n
+	}
+	$W config -state disabled
+}
+
+
+proc show_prefs {} {
+global Config
+variable Font [font actual "Arial 12 bold"]
+
+	catch {destroy .conf}
+	toplevel .conf ; wm title .conf "Configuration"
+	grid [label .conf.l0 -text "Configuration:" -relief raised -font $Font] -in .conf -column 0 -row 0 -sticky news -padx 10 -pady 10
+	grid [checkbutton .conf.c1 -text "Reset color to normal at each EOL" -variable Config(NormalAtEOL) -indicatoron yes -anchor w -justify left -font $Font -selectcolor black] -in .conf -column 0 -row 1 -sticky news -padx 10 -pady 10
+	grid [checkbutton .conf.c2 -text "Left click to set all attributes at once" -variable Config(SingleClick) -indicatoron yes -anchor w -justify left -font $Font -selectcolor black] -in .conf -column 0 -row 2 -sticky news -padx 10 -pady 10
+	after 50 {raise .conf}
+}
+
+
+proc show_273_picker {} {
+global Data CurrFG CurrBG DrawChar Idx2Hex
+variable Font [font actual "Arial 8 bold"]
+
+	catch {destroy .cpick}
+	toplevel .cpick ; wm title .cpick "273 colors picker"
+
+	foreach {Xt C} { 0 " " 16 "░" 32 "▒" 48 "▓" 64 "█" } {
+		for {set Yr 0} {$Yr < 8} {incr Yr} {
+			set B [expr $Yr+40]
+			for {set X 0} {$X < 16} {incr X} {
+				set F "[expr $X/8]_[expr $X%8+30]"
+				grid [label .cpick.cb($X:$Xt:$Yr) -text " " -width 1 -height 1 -fg white -bg [ANS2RGB $F $B $C] -font $Font] -column [expr $Xt+$X] -row $Yr -sticky news -padx 1 -pady 1
+				bind .cpick.cb($X:$Xt:$Yr) <1> "set273col $F $B \{$C\} $X:$Xt:$Yr"
+			}
+		}
+	}
+	grid [label .cpick.lRGB -font $Font -relief sunken] -column 0 -row 8 -columnspan 80 -sticky news -padx 1 -pady 1
+	after 50 {raise .cpick}
+}
+
+
+proc ANS2RGB {_F _B _C} {
+global Idx2Hex
+variable _ret "#"
+
+	switch -nocase -- $_C {
+		" " {set p_F   0 ; set p_B 100}
+		"░" {set p_F  25 ; set p_B  75}
+		"▒" {set p_F  50 ; set p_B  50}
+		"▓" {set p_F  75 ; set p_B  25}
+		"█" {set p_F 100 ; set p_B   0}
+		default {error "Something went wrong with the $_C variable within ANS2RGB !"}
+	}
+
+	set trip_F [winfo rgb . $Idx2Hex($_F)]
+	set trip_B [winfo rgb . $Idx2Hex($_B)]
+	for {set i 0} {$i < 3} {incr i} {
+		append _ret [format %02X [expr ([lindex $trip_F $i]*$p_F/100+[lindex $trip_B $i]*$p_B/100)/256]]
+	}
+	return $_ret
+}
+
+
+proc set273col {_F _B _C _N} {
+global CurrFG CurrBG DrawChar
+
+	foreach i [winfo children .cpick] { if {[string match -nocase .cpick.cb* $i]} {$i config -text " "} }
+	.cpick.cb($_N) config -text "X"
+	setFGcol $_F
+	setBGcol $_B
+	setActChar $_C
+	catch {.cpick.lRGB config -text "RGB : [ANS2RGB $_F $_B $_C]"}
+}
+
+
+proc show_RGB_picker {} {
+global CurrFG CurrBG DrawChar ColList ColIdx ColR ColG ColB
+variable Font [font actual "Arial 8"]
+
+	catch {destroy .cpick}
+	toplevel .cpick ; wm title .cpick "RGB color picker"
+	foreach {ColR ColG ColB} {"00" "00" "00"} {}
+
+	for {set i 0} {$i < 3} {incr i} {
+		grid [label .cpick.lt$i -relief raised -font [font actual "Arial 10 bold"] -text "Current [lindex {RED GREEN BLUE} $i] is fixed"] -in .cpick -column [expr $i*23] -row 0 -columnspan 23 -sticky news -padx 10 -pady 10
+		for {set j 0} {$j < 21} {incr j} {
+			grid [label .cpick.lh$i$j -relief sunken -font $Font -text "[lindex $ColList $j]"] -in .cpick -column [expr $i*23+$j+1] -row 1 -sticky news -padx 1 -pady 1
+			grid [label .cpick.lv$i$j -relief sunken -font $Font -text "[lindex $ColList $j]"] -in .cpick -column [expr $i*23] -row [expr $j+2] -sticky news -padx 1 -pady 1
+		}
+		grid [label .cpick.vdiv$i -width 1] -in .cpick -column [expr $i*23+22] -row 5 -sticky news -pady 2 -pady 2
+	}
+	grid [label .cpick.lRGB -relief sunken -font $Font] -in .cpick -column 0 -row 23 -columnspan 69 -sticky news -padx 2 -pady 2
+	redraw_RGB_picker
+}
+
+
+proc redraw_RGB_picker {} {
+global CurrFG CurrBG DrawChar ColList ColIdx ColR ColG ColB
+array set Occupied {}
+set SpreadWidth {0 -1 1 -2 2}
+
+	foreach i [winfo children .cpick] { if {[string match -nocase .cpick.pb* $i]} {destroy $i} }
+
+	set _idx [lsearch -exact $ColList $ColR]
+	foreach k $SpreadWidth {
+		set idx [expr $_idx+$k]
+		if {($idx > -1) && ($idx < 21)} {
+			set _ColR [lindex $ColList $idx]
+			for {set i 0} {$i < 21} {incr i} {
+				set _CG [lindex $ColList $i]
+				for {set j 0} {$j < 21} {incr j} {
+					set _CB [lindex $ColList $j]
+					if {[info exists ColIdx($_ColR:$_CG:$_CB:FG)]} {
+						if {![info exists Occupied(R:$i:$j)]} {
+							set _N ".cpick.pb(R:$_ColR:$_CG:$_CB)"
+							grid [label $_N -bg "#$_ColR$_CG$_CB"] -in .cpick -column [expr 1+$i] -row [expr 2+$j] -sticky news -padx 1 -pady 1
+							bind $_N <1> "setRGBcol $_ColR $_CG $_CB"
+							set Occupied(R:$i:$j) 1
+						}
+					}
+				}
+			}
+		}
+	}
+
+	set _idx [lsearch -exact $ColList $ColG]
+	foreach k $SpreadWidth {
+		set idx [expr $_idx+$k]
+		if {($idx > -1) && ($idx < 21)} {
+			set _ColG [lindex $ColList $idx]
+			for {set i 0} {$i < 21} {incr i} {
+				set _CB [lindex $ColList $i]
+				for {set j 0} {$j < 21} {incr j} {
+					set _CR [lindex $ColList $j]
+					if {[info exists ColIdx($_CR:$_ColG:$_CB:FG)]} {
+						if {![info exists Occupied(G:$i:$j)]} {
+							set _N ".cpick.pb(G:$_CR:$_ColG:$_CB)"
+							grid [label $_N -bg "#$_CR$_ColG$_CB"] -in .cpick -column [expr 24+$i] -row [expr 2+$j] -sticky news -padx 1 -pady 1
+							bind $_N <1> "setRGBcol $_CR $_ColG $_CB"
+							set Occupied(G:$i:$j) 1
+						}
+					}
+				}
+			}
+		}
+	}
+
+	set _idx [lsearch -exact $ColList $ColB]
+	foreach k $SpreadWidth {
+		set idx [expr $_idx+$k]
+		if {($idx > -1) && ($idx < 21)} {
+			set _ColB [lindex $ColList $idx]
+			for {set i 0} {$i < 21} {incr i} {
+				set _CR [lindex $ColList $i]
+				for {set j 0} {$j < 21} {incr j} {
+					set _CG [lindex $ColList $j]
+					if {[info exists ColIdx($_CR:$_CG:$_ColB:FG)]} {
+						if {![info exists Occupied(B:$i:$j)]} {
+							set _N ".cpick.pb(B:$_CR:$_CG:$_ColB)"
+							grid [label $_N -bg "#$_CR$_CG$_ColB"] -in .cpick -column [expr 47+$i] -row [expr 2+$j] -sticky news -padx 1 -pady 1
+							bind $_N <1> "setRGBcol $_CR $_CG $_ColB"
+							set Occupied(B:$i:$j) 1
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+
+proc setRGBcol {_r _g _b} {
+global CurrFG CurrBG DrawChar ColList ColIdx ColR ColG ColB
+
+	set ColR $_r ; set ColG $_g ; set ColB $_b
+	setFGcol $ColIdx($_r:$_g:$_b:FG)
+	setBGcol $ColIdx($_r:$_g:$_b:BG)
+	setActChar $ColIdx($_r:$_g:$_b:CH)
+	catch {.cpick.lRGB config -text "RGB : #$_r$_g$_b" -bg "#$_r$_g$_b"}
+	after 50 redraw_RGB_picker
+}
+
+
+############## MAIN PART ##############
+
+#set S_X [winfo screenwidth .] ; set S_Y [winfo screenheight .]
+#wm geometry . ${S_X}x$S_Y+0+0
+wm title . "ANSI editor for MUD"
+menu .m -tearoff no
+. config -menu .m
+menu .m.f -tearoff no
+menu .m.t -tearoff no
+.m add cascade -menu .m.f -label File -underline 0
+.m add cascade -menu .m.t -label Tools -underline 0
+.m.f add command -label "New drawing"  -underline 0 -command new_picture
+.m.f add separator
+.m.f add command -label "Load drawing" -underline 0 -command load_picture
+.m.f add command -label "Load ASCII" -underline 5 -command load_ascii
+.m.f add separator
+.m.f add command -label "Save drawing" -underline 0 -command save_picture
+.m.f add command -label "Export all" -underline 0 -command export_all
+.m.f add separator
+.m.f add command -label "Quit" -underline 0 -command {destroy . ; return}
+.m.t add command -label "RGB Color Picker (UTF-8!)" -underline 0 -command show_RGB_picker
+.m.t add command -label "273 Color Picker (UTF-8!)" -underline 0 -command show_273_picker
+.m.t add separator
+.m.t add command -label "Preferences" -underline 0 -command show_prefs
+
+pack [frame .f_l] -in . -side left -expand no -fill both
+pack [frame .f_r] -in . -side left -expand yes -fill both
+grid [canvas .f_l.c -background black -width 800 -height 500 -scrollregion {0 0 800 500}] -in .f_l -column 0 -row 0 -sticky news -padx 5 -pady 5
+grid [scrollbar .f_l.sy -orient vertical -width 10 -command {.f_l.c yview}] -in .f_l -column 1 -row 0 -sticky ns -padx 5 -pady 5
+grid [scrollbar .f_l.sx -orient horizontal -width 10 -command {.f_l.c xview}] -in .f_l -column 0 -row 1 -sticky we -padx 5 -pady 5
+grid [entry .f_l.e -textvariable Data(Descr)] -in .f_l -column 0 -row 2 -sticky news -padx 5 -pady 5
+
+.f_l.c config -yscrollcommand {.f_l.sy set} -xscrollcommand {.f_l.sx set}
+
+pack [frame .f_r.f_t]  -in .f_r -side top -expand yes -fill x -padx 5 -pady 5
+pack [frame .f_r.f_fg] -in .f_r -side top -expand yes -fill both -padx 10 -pady 10
+pack [frame .f_r.f_bg] -in .f_r -side top -expand yes -fill both -padx 10 -pady 10
+pack [frame .f_r.f_ch] -in .f_r -side top -expand yes -fill both -padx 10 -pady 10
+grid [text .f_r.f_t.t_r -background black -font [font actual "Courier 6 bold"] -width 40 -wrap none] -in .f_r.f_t -column 0 -row 0 -sticky news -padx 5 -pady 5
+grid [scrollbar .f_r.f_t.s_y -orient vertical   -width 5] -in .f_r.f_t -column 1 -row 0 -sticky ns -padx 5 -pady 5
+grid [scrollbar .f_r.f_t.s_x -orient horizontal -width 5] -in .f_r.f_t -column 0 -row 1 -sticky ew -padx 5 -pady 5
+.f_r.f_t.t_r config -yscrollcommand {.f_r.f_t.s_y set} -xscrollcommand {.f_r.f_t.s_x set}
+.f_r.f_t.s_y config -command {.f_r.f_t.t_r yview}
+.f_r.f_t.s_x config -command {.f_r.f_t.t_r xview}
+
+foreach {X Y N} {
+	0 0 0_30 1 0 0_31 2 0 0_32 3 0 0_33 0 1 0_34 1 1 0_35 2 1 0_36 3 1 0_37
+	0 2 1_30 1 2 1_31 2 2 1_32 3 2 1_33 0 3 1_34 1 3 1_35 2 3 1_36 3 3 1_37
+} {
+	grid [label .f_r.f_fg.l_$N -background $Idx2Hex($N) -text " " -font [font actual "Arial 14 bold"] -width 3 -relief raised] -in .f_r.f_fg -column $X -row $Y -sticky news -padx 5 -pady 5
+	bind .f_r.f_fg.l_$N <1> "setFGcol $N"
+}
+foreach {X Y N} {
+	0 0 40 1 0 41 2 0 42 3 0 43 0 1 44 1 1 45 2 1 46 3 1 47
+} {
+	grid [label .f_r.f_bg.l_$N -background $Idx2Hex($N) -text " " -font [font actual "Arial 14 bold"] -width 3 -relief raised] -in .f_r.f_bg -column $X -row $Y -sticky news -padx 5 -pady 5
+	bind .f_r.f_bg.l_$N <1> "setBGcol $N"
+}
+foreach {X C} {
+	0 " " 1 "░" 2 "▒" 3 "▓" 4 "█"
+} {
+	grid [label .f_r.f_ch.l_$X -text $C -font [font actual "Arial 14 bold"] -width 2 -relief raised] -in .f_r.f_ch -column $X -row 0 -sticky news -padx 5 -pady 5
+	bind .f_r.f_ch.l_$X <1> "setActChar $C"
+}
+grid [label .f_r.f_ch.l -text "draw:" -font [font actual "Arial 12"]] -in .f_r.f_ch -column 0 -row 1 -columnspan 3 -sticky news -padx 5 -pady 5
+grid [entry .f_r.f_ch.e -textvariable DrawChar -font [font actual "Arial 12 bold"] -width 2] -in .f_r.f_ch -column 3 -row 1 -columnspan 2 -sticky news -padx 5 -pady 5
+
+#lame bugfixes:
+foreach i {1_32 1_33 1_36 1_37} {.f_r.f_fg.l_$i config -fg black}
+bind .f_r.f_ch.l_0 <1> "setActChar { }"
+
+for {set bg 40} {$bg < 48} {incr bg} {
+	set BGCOL $Idx2Hex($bg)
+	foreach hi {0 1} {
+		for {set fg 30} {$fg < 38} {incr fg} {
+			set FGCOL $Idx2Hex(${hi}_$fg)
+			.f_r.f_t.t_r tag configure t_${hi}_${fg}_${bg} -foreground $FGCOL -background $BGCOL
+		}
+	}
+}
+setFGcol 0_37
+setBGcol 40
