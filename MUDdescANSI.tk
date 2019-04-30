@@ -13,7 +13,7 @@ package require Tk
 set CurrFG "0_37" ; set CurrBG "40" ; global CurrFG CurrBG
 array set Data {XSize 0 YSize 0 CH:0:0 "X" FG:0:0 0_37 BG:0:0 40 Descr "Dummy description" FileName "dummy_drawing"} ; global Data
 array set Idx2Hex { 0_30 "#000000" 0_31 "#A00000" 0_32 "#00A000" 0_33 "#A0A000" 0_34 "#0000A0" 0_35 "#A000A0" 0_36 "#00A0A0" 0_37 "#A0A0A0" 1_30 "#606060" 1_31 "#FF0000" 1_32 "#00FF00" 1_33 "#FFFF00" 1_34 "#0000FF" 1_35 "#FF00FF" 1_36 "#00FFFF" 1_37 "#FFFFFF" 40 "#000000" 41 "#A00000" 42 "#00A000" 43 "#A0A000" 44 "#0000A0" 45 "#A000A0" 46 "#00A0A0" 47 "#A0A0A0" } ; global Idx2Hex
-array set Config {NormalAtEOL 1 SingleClick 0}
+array set Config {NormalAtEOL 1 SingleClick 0 NeedDescASCANS 0}
 set DrawChar "@" ; global DrawChar
 set TempX 10 ; set TempY 10
 set ColList "00 19 20 26 33 40 4C 60 66 6C 73 79 80 86 8C 93 99 A0 C0 E0 FF" ; global ColList
@@ -372,6 +372,7 @@ global Data
 		}
 	}
 	set Data(Descr) [read $fin]
+	while {[string index $Data(Descr) end] < "\x20"} {set Data(Descr) [string range $Data(Descr) 0 end-1]}
 	close $fin
 	set Data(FileName) [file rootname [file tail $FName]]
 
@@ -469,6 +470,92 @@ array set RawLines {}
 }
 
 
+proc load_ansi {} {
+global Data
+array set Data2 {}
+variable CRSR_X 0
+variable CRSR_Y 0
+variable MAX_X 0
+variable MAX_Y 0
+variable CurrHi 0
+variable CurrFG 37
+variable CurrBG 40
+
+	set Format { {{ANSI Files} {.ans}} }
+	set FName [tk_getOpenFile -initialdir imports/ -filetypes $Format -title "Select an ANSI to open"]
+	if {![string length $FName]} return
+	if {![file readable $FName]} {
+		tk_messageBox -title WARNING! -icon warning -type ok -message "No reading permission on file!"
+		return
+	}
+	for {set j 0} {$j < 1000} {incr j} {
+		for {set i 0} {$i < 1000} {incr i} {
+			set Data2(CH:$i:$j) ""
+			set Data2(FG:$i:$j) "0_37"
+			set Data2(BG:$i:$j) "40"
+		}
+	}
+	set fin [open $FName r] ; set sor ""
+	while {![string length $sor]} { set sor [gets $fin] }
+	while {![eof $fin]} {
+		while {[string length $sor]} {
+			if {"[string range $sor 0 1]" eq "\033\["} {
+				if {[regexp {^\e\[([01])?\;?(3[0-7])?\;?(4[0-7])?m} $sor _MV _hi _fg _bg]} {
+					if {[string length $_hi]} {set CurrHi $_hi}
+					if {[string length $_fg]} {set CurrFG $_fg}
+					if {[string length $_bg]} {set CurrBG $_bg}
+					if {[regexp {^\e\[0m} $sor]} {set CurrHi 0 ; set CurrFG 37 ; set CurrBG 40}
+					set sor [string range $sor [expr [string first "m" $sor]+1] end]
+				} elseif {[regexp {^\e\[([0-9]{0,2})([ABCD])} $sor _MV _stp _dir]} {
+					if {![string length $_stp]} {set _stp2 1} else {set _stp2 $_stp}
+					switch -nocase -- $_dir {
+						"A" {incr CRSR_Y -$_stp2}
+						"B" {incr CRSR_Y  $_stp2}
+						"C" {incr CRSR_X  $_stp2}
+						"D" {incr CRSR_X -$_stp2}
+					}
+					set sor [string range $sor [expr [string length $_stp]+3] end]
+				} elseif {[regexp {^\e\[H} $sor _MV]} {
+					set CRSR_X 0 ; set CRSR_Y 0
+					set sor [string range $sor [expr [string first "H" $sor]+1] end]
+				} else {
+					# Strip the unsupported ANSI tag
+					set sor [string range $sor 2 end]
+					while {([string length $sor]) && (![string match -nocase {[A-Z]*} $sor])} {set sor [string range $sor 1 end]}
+					set sor [string range $sor 1 end]
+				}
+			} else {
+				set Data2(CH:$CRSR_X:$CRSR_Y) [string index $sor 0]
+				set sor [string range $sor 1 end]
+				set Data2(FG:$CRSR_X:$CRSR_Y) ${CurrHi}_$CurrFG
+				set Data2(BG:$CRSR_X:$CRSR_Y) $CurrBG
+				incr CRSR_X
+				if {$CRSR_X > $MAX_X} {set MAX_X $CRSR_X}
+			}
+		}
+		set sor [gets $fin]
+		incr CRSR_Y ; set CRSR_X 0
+		if {$CRSR_Y > $MAX_Y} {set MAX_Y $CRSR_Y}
+	}
+	close $fin
+	set Data(XSize) $MAX_X
+	set Data(YSize) $MAX_Y
+
+	for {set j 0} {$j < $Data(YSize)} {incr j} {
+		for {set i 0} {$i < $Data(XSize)} {incr i} {
+			foreach v {FG BG CH} {
+				set Data($v:$i:$j) $Data2($v:$i:$j)
+			}
+		}
+	}
+	set Data(Descr) "This is an imported ANSI art"
+	set Data(FileName) [file rootname [file tail $FName]]
+
+	refresh_big
+	refresh_map
+}
+
+
 proc save_picture {} {
 global Data
 
@@ -510,12 +597,15 @@ global Data Config ANSFG2MUX ANSFG2MOO
 	set CurrFG 37 ; set CurrBG 40 ; set CurrHi 0 ; set CurrFullFG 0_37
 	set LastFG 37 ; set LastBG 40 ; set LastHi 0 ; set LastFullFG 0_37
 
-	puts -nonewline $fout(mux) "@desc here = "
-	puts -nonewline $fout(moo) "@desc here as "
+	puts -nonewline $fout(mux) "@desc here = %xn"
+	puts -nonewline $fout(moo) "@desc here as \""
 	set Multiline 0
 
 	for {set j 0} {$j < $Data(YSize)} {incr j} {
-		if {$Multiline} {puts -nonewline $fout(moo) "say "}
+		if {$Multiline} {
+			puts -nonewline $fout(moo) "say "
+			if {"$Data(CH:0:$j)" eq " "} {puts -nonewline $fout(moo) $ANSFG2MOO($Data(FG:0:$j))}
+		}
 		for {set i 0} {$i < $Data(XSize)} {incr i} {
 			set CurrHi [string index $Data(FG:$i:$j) 0]
 			set CurrFG [string range $Data(FG:$i:$j) 2 3]
@@ -553,25 +643,32 @@ global Data Config ANSFG2MUX ANSFG2MOO
 			puts -nonewline $fout(ans) $Data(CH:$i:$j)
 			puts -nonewline $fout(asc) $Data(CH:$i:$j)
 			puts -nonewline $fout(mux) $Data(CH:$i:$j)
-			puts -nonewline $fout(moo) $Data(CH:$i:$j)
+			puts -nonewline $fout(moo) [string map {\" \\\" \\ \\\\} $Data(CH:$i:$j)]
 		}
 
 		if {$Config(NormalAtEOL)} {
 			puts $fout(ans) "\033\[0m"
 			puts -nonewline $fout(mux) "%xn%r"
-			puts $fout(moo) "\[normal\]"
+			puts -nonewline $fout(moo) "\[normal\]"
 		} else {
 			puts $fout(ans) ""
 			puts -nonewline $fout(mux) "%r"
-			puts $fout(moo) ""
 		}
 		puts $fout(asc) ""
-		if {!$Multiline} {puts $fout(moo) "@notedit here.description" ; set Multiline 1}
+		if {$Multiline} {
+			puts $fout(moo) ""
+		} else {
+			puts $fout(moo) "\""
+			puts $fout(moo) "@notedit here.description"
+			set Multiline 1
+		}
 		set LastHi 0 ; set LastFG 37 ; set LastBG 40 ; set LastFullFG 0_37
 	}
 	if {[string length $Data(Descr)]} {
-		puts $fout(ans) $Data(Descr)
-		puts $fout(asc) $Data(Descr)
+		if {$Config(NeedDescASCANS)} {
+			puts $fout(ans) $Data(Descr)
+			puts $fout(asc) $Data(Descr)
+		}
 		puts $fout(mux) "$Data(Descr)%r"
 		puts $fout(moo) "say $Data(Descr)"
 		puts $fout(moo) "save"
@@ -652,6 +749,7 @@ variable Font [font actual "Arial 12 bold"]
 	grid [label .conf.l0 -text "Configuration:" -relief raised -font $Font] -in .conf -column 0 -row 0 -sticky news -padx 10 -pady 10
 	grid [checkbutton .conf.c1 -text "Reset color to normal at each EOL" -variable Config(NormalAtEOL) -indicatoron yes -anchor w -justify left -font $Font -selectcolor black] -in .conf -column 0 -row 1 -sticky news -padx 10 -pady 10
 	grid [checkbutton .conf.c2 -text "Left click to set all attributes at once" -variable Config(SingleClick) -indicatoron yes -anchor w -justify left -font $Font -selectcolor black] -in .conf -column 0 -row 2 -sticky news -padx 10 -pady 10
+	grid [checkbutton .conf.c3 -text "Export @desc row for ASCII and ANSI too" -variable Config(NeedDescASCANS) -indicatoron yes -anchor w -justify left -font $Font -selectcolor black] -in .conf -column 0 -row 3 -sticky news -padx 10 -pady 10
 	after 50 {raise .conf}
 }
 
@@ -834,7 +932,9 @@ menu .m.t -tearoff no
 .m.f add command -label "New drawing"  -underline 0 -command new_picture
 .m.f add separator
 .m.f add command -label "Load drawing" -underline 0 -command load_picture
-.m.f add command -label "Load ASCII" -underline 5 -command load_ascii
+.m.f add separator
+.m.f add command -label "Import ASCII" -underline 7 -command load_ascii
+.m.f add command -label "Import ANSI" -underline 0 -command load_ansi
 .m.f add separator
 .m.f add command -label "Save drawing" -underline 0 -command save_picture
 .m.f add command -label "Export all" -underline 0 -command export_all

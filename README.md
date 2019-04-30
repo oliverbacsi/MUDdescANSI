@@ -60,6 +60,7 @@ This avoids You having to click each editor cell 3 times: Left click, Right clic
 - *Left click*: Change FG color, BG color, and change the character face to the appropriate Hatch
 
 ####It is recommended to use one of the two multi-color picker palettes:
+
 **1) The RGB color picker:**
 > Menu --> Tools --> RGB color picker
 
@@ -87,6 +88,9 @@ Not turning off color attributes at "EOL" might result that a colored bar is dra
 Turning off color attributes at "EOL" might result that You have to turn the same attributes on again at the beginning of the line unnecessarily, making the @desc grow like hell...
 > Menu --> Tools --> Preferences --> [X] Reset color to normal at each EOL
 
+In case You are using the software for ASCII/ANSI art only and don't need the MUD room description under the ASCII/ANSI, then either don't fill the Description cell under the drawing area, or You can configure the software to output the Description only to MUD/MOO files but not for ASCII/ANSI:
+> Menu --> Tools --> Preferences --> [ ] Export @desc row for ASCII and ANSI too
+
 In the File menu You can Load an existing drawing, Save Your current drawing, or start a New one where You have to specify the width and height only. Drawings are saved as *.dat* files in the "data/" folder.
 In the same menu You can import existing ASCII art to colorize. This will be looked up in the "imports/" folder as *.asc* or *.txt* files as default.
 When finished working You can export to result from the File menu. Check the results in the "exports/" folder as *.asc , .ans , .mux , .moo* files. The *.mux* files have the single-line syntax with "%r%h" style coloring. The *.moo* files are exported to be able to copy into the client window as multi-line editing in "notedit / say" style.
@@ -98,5 +102,7 @@ When finished working You can export to result from the File menu. Check the res
 - [ ] Background color support for MUD?
 - [ ] Some more comprehensive GUI would be better
 - [ ] Some in-line help window would be desirable
-- [ ] Last EOL character is read back from *.dat* files into the @desc field unneccessarily
-- [ ] Similarly to ASCII import it would be nice to have ANSI file import as well (convert back *.ans* to *.dat*), so that users could load ANSI art from someone else to work on further
+- [X] Last EOL character is read back from *.dat* files into the @desc field unneccessarily
+- [X] Similarly to ASCII import it would be nice to have ANSI file import as well (convert back *.ans* to *.dat*), so that users could load ANSI art from someone else to work on further
+- [X] MUD descriptions are collapsing leading spaces, so may be worth to push out the first attribute tag to the start of the line
+- [X] Need to escape the backslash and double-quote with a backslash in MUD descriptions...
